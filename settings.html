@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Portfolio tracker settings. Manage portfolios, export/import data, and configure cloud backup with GitHub Gist.">
+  <title>Settings - Portfolio Tracker</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1><span class="icon">📊</span> Portfolio Tracker</h1>
+      </div>
+      <nav class="sidebar-nav">
+        <ul>
+          <li><a href="index.html"><span class="nav-icon">🏠</span> Dashboard</a></li>
+          <li><a href="holdings.html"><span class="nav-icon">📈</span> Holdings</a></li>
+          <li><a href="transactions.html"><span class="nav-icon">📝</span> Transactions</a></li>
+          <li><a href="dividends.html"><span class="nav-icon">💰</span> Dividends</a></li>
+          <li><a href="calendar.html"><span class="nav-icon">📅</span> Calendar</a></li>
+          <li><a href="reports.html"><span class="nav-icon">📉</span> Reports</a></li>
+          <li><a href="settings.html" class="active"><span class="nav-icon">⚙️</span> Settings</a></li>
+        </ul>
+      </nav>
+      <div class="sidebar-user">
+        <div class="sidebar-user-info">
+          <span>👤</span>
+          <span class="sidebar-user-name" id="userInfo">User</span>
+        </div>
+        <div class="sidebar-user-actions">
+          <button class="sidebar-btn" id="themeToggle" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
+          <button class="sidebar-btn" onclick="logoutUser()" title="Logout">🚪</button>
+        </div>
+      </div>
+      <div class="sidebar-footer">
+        <p>v1.0 &middot; Free Portfolio Tracker</p>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="top-header">
+        <button class="mobile-toggle">☰</button>
+        <h2>Settings</h2>
+        <div class="header-actions">
+          <button class="btn btn-ghost btn-sm" id="themeToggleHeader" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="page-header">
+          <h2>Settings & Data Management</h2>
+          <p>Manage your portfolios, export data, and configure cloud backup</p>
+        </div>
+
+        <!-- Portfolios Management -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h3>Portfolios</h3>
+            <button class="btn btn-primary btn-sm" onclick="openAddPortfolioModal()">+ Add Portfolio</button>
+          </div>
+          <div class="card-body">
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Brokerage</th>
+                    <th>Holdings</th>
+                    <th>Value</th>
+                    <th class="text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="portfoliosTable">
+                  <tr>
+                    <td colspan="5" class="text-center text-muted">No portfolios yet</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Local Export/Import -->
+        <div class="import-export-section">
+          <div class="import-export-card">
+            <h3>📥 Export Data</h3>
+            <p>Download a JSON backup of all your portfolio data to your local computer.</p>
+            <div class="form-group" style="margin-top:12px;">
+              <label>
+                <input type="checkbox" id="encryptExportCheck"> Encrypt backup with password
+              </label>
+            </div>
+            <button class="btn btn-primary" onclick="handleExport()">Download JSON Backup</button>
+          </div>
+          <div class="import-export-card">
+            <h3>📤 Import Data</h3>
+            <p>Restore your portfolio data from a previously exported JSON file.</p>
+            <input type="file" id="importFile" accept=".json" style="display:none;" onchange="handleImportFile(this)">
+            <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">Upload JSON File</button>
+          </div>
+        </div>
+
+        <!-- GitHub Gist Integration -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h3>☁️ GitHub Gist Cloud Backup</h3>
+          </div>
+          <div class="card-body">
+            <p class="mb-4" style="color:var(--text-muted);">
+              Store your portfolio data in a private GitHub Gist for easy backup and access across devices.
+              You will need a <a href="https://github.com/settings/tokens/new?scopes=gist&description=Portfolio+Tracker" target="_blank" rel="noopener noreferrer">GitHub Personal Access Token</a> with the <code>gist</code> scope.
+            </p>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="gistToken">GitHub Token</label>
+                <input type="password" id="gistToken" class="token-input" placeholder="ghp_xxxxxxxxxxxx">
+              </div>
+              <div class="form-group">
+                <label for="gistId">Gist ID (optional, for existing backup)</label>
+                <input type="text" id="gistId" class="token-input" placeholder="abc123...">
+              </div>
+            </div>
+            <div class="form-group" style="margin-top:8px;">
+              <label>
+                <input type="checkbox" id="encryptGistCheck"> Encrypt Gist backup with password
+              </label>
+            </div>
+            <div class="form-actions" style="justify-content:flex-start; margin-top:16px;">
+              <button class="btn btn-primary" onclick="saveGistSettings()">Save Settings</button>
+              <button class="btn btn-success" onclick="exportToGistFromSettings()">Export to Gist</button>
+              <button class="btn btn-secondary" onclick="importFromGistFromSettings()">Import from Gist</button>
+            </div>
+            <div class="mt-4" id="gistStatus" style="font-size:0.85rem; color:var(--text-muted);"></div>
+          </div>
+        </div>
+
+        <!-- User Account -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h3>👤 User Account</h3>
+          </div>
+          <div class="card-body">
+            <div class="flex items-center justify-between" style="margin-bottom:16px;">
+              <div>
+                <h4 style="font-size:1rem; margin-bottom:4px;">Logged in as <span id="settingsUsername" style="font-weight:700;">user</span></h4>
+                <p style="color:var(--text-muted); font-size:0.85rem;">Manage your account and session.</p>
+              </div>
+              <button class="btn btn-danger" onclick="logoutUser()">Logout</button>
+            </div>
+            <div class="form-group">
+              <label>Change Password</label>
+              <div class="form-row">
+                <div class="form-group">
+                  <input type="password" id="currentPassword" placeholder="Current password">
+                </div>
+                <div class="form-group">
+                  <input type="password" id="newPassword" placeholder="New password (min 6 chars)">
+                </div>
+              </div>
+              <button class="btn btn-primary" onclick="changePassword()">Update Password</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Appearance -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h3>🎨 Appearance</h3>
+          </div>
+          <div class="card-body">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 style="font-size:1rem; margin-bottom:4px;">Dark Mode</h4>
+                <p style="color:var(--text-muted); font-size:0.85rem;">Switch between light and dark themes for easier viewing.</p>
+              </div>
+              <button class="btn btn-secondary" id="darkModeToggle" onclick="toggleTheme()">Switch to Dark Mode</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="card">
+          <div class="card-header">
+            <h3>⚠️ Danger Zone</h3>
+          </div>
+          <div class="card-body">
+            <div class="flex items-center justify-between" style="margin-bottom:16px;">
+              <div>
+                <h4 style="font-size:1rem; margin-bottom:4px;">Reset All Data</h4>
+                <p style="color:var(--text-muted); font-size:0.85rem;">This will permanently delete all your portfolios, holdings, and transactions. This cannot be undone.</p>
+              </div>
+              <button class="btn btn-danger" onclick="resetAllData()">Reset Data</button>
+            </div>
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 style="font-size:1rem; margin-bottom:4px;">Delete Account</h4>
+                <p style="color:var(--text-muted); font-size:0.85rem;">Permanently delete your account and all associated data. This cannot be undone.</p>
+              </div>
+              <button class="btn btn-danger" onclick="deleteAccount()">Delete Account</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Add/Edit Portfolio Modal -->
+  <div class="modal-overlay" id="portfolioModal" role="dialog" aria-modal="true" aria-labelledby="portfolioModalTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="portfolioModalTitle">Add Portfolio</h3>
+        <button class="modal-close" onclick="hideModal('portfolioModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="portfolioForm" onsubmit="return false;">
+          <input type="hidden" id="portfolioId">
+          <div class="form-group">
+            <label for="portfolioName">Portfolio Name *</label>
+            <input type="text" id="portfolioName" placeholder="e.g., Retirement Account" required>
+          </div>
+          <div class="form-group">
+            <label for="portfolioBrokerage">Brokerage *</label>
+            <select id="portfolioBrokerage" required>
+              <option value="">Select brokerage...</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="hideModal('portfolioModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="savePortfolio()">Save Portfolio</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/settings.js"></script>
+</body>
+</html>

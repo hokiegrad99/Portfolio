@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Record and manage portfolio transactions including buys, sells, dividends, and initial positions.">
+  <title>Transactions - Portfolio Tracker</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1><span class="icon">📊</span> Portfolio Tracker</h1>
+      </div>
+      <nav class="sidebar-nav">
+        <ul>
+          <li><a href="index.html"><span class="nav-icon">🏠</span> Dashboard</a></li>
+          <li><a href="holdings.html"><span class="nav-icon">📈</span> Holdings</a></li>
+          <li><a href="transactions.html" class="active"><span class="nav-icon">📝</span> Transactions</a></li>
+          <li><a href="dividends.html"><span class="nav-icon">💰</span> Dividends</a></li>
+          <li><a href="calendar.html"><span class="nav-icon">📅</span> Calendar</a></li>
+          <li><a href="reports.html"><span class="nav-icon">📉</span> Reports</a></li>
+          <li><a href="settings.html"><span class="nav-icon">⚙️</span> Settings</a></li>
+        </ul>
+      </nav>
+      <div class="sidebar-user">
+        <div class="sidebar-user-info">
+          <span>👤</span>
+          <span class="sidebar-user-name" id="userInfo">User</span>
+        </div>
+        <div class="sidebar-user-actions">
+          <button class="sidebar-btn" id="themeToggle" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
+          <button class="sidebar-btn" onclick="logoutUser()" title="Logout">🚪</button>
+        </div>
+      </div>
+      <div class="sidebar-footer">
+        <p>v1.0 &middot; Free Portfolio Tracker</p>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="top-header">
+        <button class="mobile-toggle">☰</button>
+        <h2>Transactions</h2>
+        <div class="header-actions">
+          <div class="portfolio-selector">
+            <label for="portfolioSelector">Portfolio:</label>
+            <select id="portfolioSelector" class="select-styled">
+              <option value="">All Portfolios</option>
+            </select>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="themeToggleHeader" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
+          <button class="btn btn-primary btn-sm" onclick="openAddTransactionModal()">+ Add Transaction</button>
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="page-header">
+          <h2>Transaction History</h2>
+          <p>Record and manage all your portfolio transactions</p>
+        </div>
+
+        <div class="card">
+          <div class="card-body">
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Portfolio</th>
+                    <th>Symbol</th>
+                    <th>Type</th>
+                    <th class="text-right">Shares</th>
+                    <th class="text-right">Price</th>
+                    <th class="text-right">Amount</th>
+                    <th>Div. Type</th>
+                    <th>Notes</th>
+                    <th class="text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="transactionsTable">
+                  <tr>
+                    <td colspan="10" class="text-center text-muted">No transactions yet</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Add/Edit Transaction Modal -->
+  <div class="modal-overlay" id="transactionModal" role="dialog" aria-modal="true" aria-labelledby="txModalTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="txModalTitle">Add Transaction</h3>
+        <button class="modal-close" onclick="hideModal('transactionModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="transactionForm" onsubmit="return false;">
+          <input type="hidden" id="txId">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="txPortfolio">Portfolio *</label>
+              <select id="txPortfolio" required onchange="onTxPortfolioChange()">
+                <option value="">Select portfolio...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="txHolding">Holding</label>
+              <select id="txHolding" onchange="onTxHoldingChange()">
+                <option value="">Select holding...</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row" id="txSymbolRow">
+            <div class="form-group" style="position:relative;">
+              <label for="txSymbol">Symbol</label>
+              <input type="text" id="txSymbol" placeholder="e.g. AAPL" maxlength="10" onblur="autoLookupTxSymbol()">
+              <span id="txSymbolLookupSpinner" class="lookup-spinner hidden">⏳</span>
+              <span id="txSymbolLookupStatus" class="lookup-status hidden"></span>
+            </div>
+            <div class="form-group">
+              <label for="txName">Name</label>
+              <input type="text" id="txName" placeholder="Auto-filled from lookup">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="txDate">Date *</label>
+              <input type="date" id="txDate" required>
+            </div>
+            <div class="form-group">
+              <label for="txType">Type *</label>
+              <select id="txType" required onchange="onTxTypeChange()">
+                <option value="">Select type...</option>
+                <option value="initial">Initial</option>
+                <option value="buy">Buy</option>
+                <option value="sell">Sell</option>
+                <option value="dividend">Dividend</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row" id="sharesPriceRow">
+            <div class="form-group">
+              <label for="txShares">Shares</label>
+              <input type="number" id="txShares" placeholder="0.00" step="0.0001" min="0">
+            </div>
+            <div class="form-group">
+              <label for="txPrice">Price per Share</label>
+              <input type="number" id="txPrice" placeholder="0.00" step="0.01" min="0">
+            </div>
+          </div>
+          <div class="form-row hidden" id="dividendRow">
+            <div class="form-group">
+              <label for="txAmount">Dividend Amount *</label>
+              <input type="number" id="txAmount" placeholder="0.00" step="0.01" min="0">
+            </div>
+            <div class="form-group">
+              <label for="txDividendType">Dividend Type</label>
+              <select id="txDividendType">
+                <option value="">Select type...</option>
+                <option value="qualified">Qualified</option>
+                <option value="ordinary">Ordinary</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="txNotes">Notes</label>
+            <input type="text" id="txNotes" placeholder="Optional notes...">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="hideModal('transactionModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveTransaction()">Save Transaction</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/transactions.js"></script>
+</body>
+</html>

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Portfolio income reports with monthly and annual dividend charts. Compare portfolio performance across brokerages.">
+  <title>Reports - Portfolio Tracker</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1><span class="icon">📊</span> Portfolio Tracker</h1>
+      </div>
+      <nav class="sidebar-nav">
+        <ul>
+          <li><a href="index.html"><span class="nav-icon">🏠</span> Dashboard</a></li>
+          <li><a href="holdings.html"><span class="nav-icon">📈</span> Holdings</a></li>
+          <li><a href="transactions.html"><span class="nav-icon">📝</span> Transactions</a></li>
+          <li><a href="dividends.html"><span class="nav-icon">💰</span> Dividends</a></li>
+          <li><a href="calendar.html"><span class="nav-icon">📅</span> Calendar</a></li>
+          <li><a href="reports.html" class="active"><span class="nav-icon">📉</span> Reports</a></li>
+          <li><a href="settings.html"><span class="nav-icon">⚙️</span> Settings</a></li>
+        </ul>
+      </nav>
+      <div class="sidebar-user">
+        <div class="sidebar-user-info">
+          <span>👤</span>
+          <span class="sidebar-user-name" id="userInfo">User</span>
+        </div>
+        <div class="sidebar-user-actions">
+          <button class="sidebar-btn" id="themeToggle" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
+          <button class="sidebar-btn" onclick="logoutUser()" title="Logout">🚪</button>
+        </div>
+      </div>
+      <div class="sidebar-footer">
+        <p>v1.0 &middot; Free Portfolio Tracker</p>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="top-header">
+        <button class="mobile-toggle">☰</button>
+        <h2>Reports</h2>
+        <div class="header-actions">
+          <div class="portfolio-selector">
+            <label for="portfolioSelector">Portfolio:</label>
+            <select id="portfolioSelector" class="select-styled">
+              <option value="">All Portfolios</option>
+            </select>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="themeToggleHeader" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="page-header">
+          <h2>Income Reports</h2>
+          <p>Visualize your portfolio and dividend income over time</p>
+        </div>
+
+        <div class="tabs">
+          <button class="tab active" data-tab="monthly" onclick="switchTab('monthly')">Monthly Income</button>
+          <button class="tab" data-tab="annual" onclick="switchTab('annual')">Annual Income</button>
+          <button class="tab" data-tab="portfolio" onclick="switchTab('portfolio')">Portfolio Comparison</button>
+          <button class="tab" data-tab="holdings" onclick="switchTab('holdings')">By Holding</button>
+        </div>
+
+        <!-- Monthly Income Tab -->
+        <div id="tab-monthly" class="tab-content">
+          <div class="card">
+            <div class="card-header">
+              <h3>Monthly Dividend Income</h3>
+            </div>
+            <div class="card-body">
+              <div class="chart-container large">
+                <canvas id="monthlyIncomeChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Annual Income Tab -->
+        <div id="tab-annual" class="tab-content hidden">
+          <div class="card">
+            <div class="card-header">
+              <h3>Annual Dividend Income</h3>
+            </div>
+            <div class="card-body">
+              <div class="chart-container large">
+                <canvas id="annualIncomeChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Portfolio Comparison Tab -->
+        <div id="tab-portfolio" class="tab-content hidden">
+          <div class="card">
+            <div class="card-header">
+              <h3>Dividend Income by Portfolio</h3>
+            </div>
+            <div class="card-body">
+              <div class="chart-container large">
+                <canvas id="portfolioComparisonChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- By Holding Tab -->
+        <div id="tab-holdings" class="tab-content hidden">
+          <div class="card">
+            <div class="card-header">
+              <h3>Dividend Income by Holding</h3>
+            </div>
+            <div class="card-body">
+              <div class="chart-container large">
+                <canvas id="holdingDividendChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/reports.js"></script>
+</body>
+</html>

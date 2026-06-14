@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Manage your portfolio holdings across multiple brokerages. View positions, gains/losses, and market value.">
+  <title>Holdings - Portfolio Tracker</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1><span class="icon">📊</span> Portfolio Tracker</h1>
+      </div>
+      <nav class="sidebar-nav">
+        <ul>
+          <li><a href="index.html"><span class="nav-icon">🏠</span> Dashboard</a></li>
+          <li><a href="holdings.html" class="active"><span class="nav-icon">📈</span> Holdings</a></li>
+          <li><a href="transactions.html"><span class="nav-icon">📝</span> Transactions</a></li>
+          <li><a href="dividends.html"><span class="nav-icon">💰</span> Dividends</a></li>
+          <li><a href="calendar.html"><span class="nav-icon">📅</span> Calendar</a></li>
+          <li><a href="reports.html"><span class="nav-icon">📉</span> Reports</a></li>
+          <li><a href="settings.html"><span class="nav-icon">⚙️</span> Settings</a></li>
+        </ul>
+      </nav>
+      <div class="sidebar-user">
+        <div class="sidebar-user-info">
+          <span>👤</span>
+          <span class="sidebar-user-name" id="userInfo">User</span>
+        </div>
+        <div class="sidebar-user-actions">
+          <button class="sidebar-btn" id="themeToggle" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
+          <button class="sidebar-btn" onclick="logoutUser()" title="Logout">🚪</button>
+        </div>
+      </div>
+      <div class="sidebar-footer">
+        <p>v1.0 &middot; Free Portfolio Tracker</p>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="top-header">
+        <button class="mobile-toggle">☰</button>
+        <h2>Holdings</h2>
+        <div class="header-actions">
+          <div class="portfolio-selector">
+            <label for="portfolioSelector">Portfolio:</label>
+            <select id="portfolioSelector" class="select-styled">
+              <option value="">All Portfolios</option>
+            </select>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="themeToggleHeader" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
+          <button class="btn btn-secondary btn-sm" id="refreshPricesBtn" onclick="refreshPricesOnPage()">🔄 Refresh Prices</button>
+          <button class="btn btn-primary btn-sm" onclick="openAddHoldingModal()">+ Add Holding</button>
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="page-header">
+          <h2>Your Holdings</h2>
+          <p>Track positions across all brokerages and portfolios</p>
+        </div>
+
+        <div class="card">
+          <div class="card-body">
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Symbol</th>
+                    <th>Name</th>
+                    <th>Portfolio</th>
+                    <th class="text-right">Shares</th>
+                    <th class="text-right">Avg Cost</th>
+                    <th class="text-right">Current Price</th>
+                    <th class="text-right">Market Value</th>
+                    <th class="text-right">Gain/Loss</th>
+                    <th class="text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="holdingsTable">
+                  <tr>
+                    <td colspan="9" class="text-center text-muted">No holdings yet</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Add/Edit Holding Modal -->
+  <div class="modal-overlay" id="holdingModal" role="dialog" aria-modal="true" aria-labelledby="holdingModalTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="holdingModalTitle">Add Holding</h3>
+        <button class="modal-close" onclick="hideModal('holdingModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="holdingForm" onsubmit="return false;">
+          <input type="hidden" id="holdingId">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="holdingPortfolio">Portfolio *</label>
+              <select id="holdingPortfolio" required>
+                <option value="">Select portfolio...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="holdingSymbol">Symbol *</label>
+              <div style="position:relative;">
+                <input type="text" id="holdingSymbol" placeholder="e.g., AAPL" required maxlength="10" onblur="autoLookupHoldingInfo()">
+                <span id="symbolLookupSpinner" class="hidden" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); color:var(--primary); font-size:0.85rem;">⏳</span>
+              </div>
+              <small id="symbolLookupStatus" class="hidden" style="color:var(--text-muted); margin-top:4px; display:block;"></small>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="holdingName">Name</label>
+            <input type="text" id="holdingName" placeholder="e.g., Apple Inc.">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="holdingShares">Shares *</label>
+              <input type="number" id="holdingShares" placeholder="0.00" step="0.0001" min="0" required>
+            </div>
+            <div class="form-group">
+              <label for="holdingAvgCost">Average Cost *</label>
+              <input type="number" id="holdingAvgCost" placeholder="0.00" step="0.01" min="0" required>
+            </div>
+            <div class="form-group">
+              <label for="holdingCurrentPrice">Current Price</label>
+              <input type="number" id="holdingCurrentPrice" placeholder="0.00" step="0.01" min="0">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="hideModal('holdingModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveHolding()">Save Holding</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/holdings.js"></script>
+</body>
+</html>

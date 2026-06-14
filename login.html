@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Login or register for Portfolio Tracker.">
+  <title>Login - Portfolio Tracker</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="login-icon">📊</div>
+        <h1>Portfolio Tracker</h1>
+        <p>Track your investments and dividends</p>
+      </div>
+
+      <div class="tabs" style="margin-bottom:24px;">
+        <button class="tab active" id="loginTab" onclick="showLoginForm()">Login</button>
+        <button class="tab" id="registerTab" onclick="showRegisterForm()">Register</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm" onsubmit="return false;">
+        <div class="form-group">
+          <label for="loginUsername">Username</label>
+          <input type="text" id="loginUsername" placeholder="Enter username" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" placeholder="Enter password" required autocomplete="current-password">
+        </div>
+        <button class="btn btn-primary btn-lg" style="width:100%;" onclick="handleLogin()">Login</button>
+      </form>
+
+      <!-- Register Form -->
+      <form id="registerForm" class="hidden" onsubmit="return false;">
+        <div class="form-group">
+          <label for="registerUsername">Username</label>
+          <input type="text" id="registerUsername" placeholder="Choose a username" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="registerPassword">Password</label>
+          <input type="password" id="registerPassword" placeholder="Choose a password" required autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label for="registerConfirmPassword">Confirm Password</label>
+          <input type="password" id="registerConfirmPassword" placeholder="Confirm password" required autocomplete="new-password">
+        </div>
+        <button class="btn btn-primary btn-lg" style="width:100%;" onclick="handleRegister()">Create Account</button>
+      </form>
+    </div>
+
+    <!-- Logged-in Banner -->
+    <div id="loggedInBanner" class="hidden" style="margin-bottom:20px;">
+      <div class="login-card" style="background:var(--success-bg); border:1px solid var(--success); text-align:center;">
+        <p style="color:var(--success); font-weight:500; margin:0;">✅ Logged in as <strong id="loggedInUsername"></strong></p>
+        <p style="color:var(--text-muted); font-size:0.85rem; margin:4px 0 0;">Restoring a backup will overwrite your current data.</p>
+        <div style="margin-top:12px; display:flex; gap:12px; justify-content:center;">
+          <a href="index.html" class="btn btn-primary" style="display:inline-block; text-decoration:none;">Go to Dashboard</a>
+          <button class="btn btn-danger" onclick="logoutUser();">Log Out</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Restore from Backup -->
+    <div class="login-card" style="margin-top:20px;">
+      <div style="text-align:center; margin-bottom:16px;">
+        <h3 style="font-size:1.1rem; font-weight:600; color:var(--text);">📦 Restore from Backup</h3>
+        <p id="restoreSubtitle" style="color:var(--text-muted); font-size:0.85rem;">Import your data from a local file or GitHub Gist</p>
+      </div>
+
+      <div class="tabs" style="margin-bottom:16px;">
+        <button class="tab active" id="restoreLocalTab" onclick="showRestoreLocal()">Local File</button>
+        <button class="tab" id="restoreGistTab" onclick="showRestoreGist()">Gist</button>
+      </div>
+
+      <form id="restoreLocalForm" onsubmit="return false;">
+        <div class="form-group">
+          <label for="restoreFile">Backup File (.json)</label>
+          <input type="file" id="restoreFile" accept=".json" required>
+        </div>
+        <div class="form-group hidden" id="restoreLocalPasswordGroup">
+          <label for="restoreLocalPassword">Backup Password</label>
+          <input type="password" id="restoreLocalPassword" placeholder="Enter backup password if encrypted" autocomplete="new-password" onkeydown="if(event.key==='Enter')handleRestoreLocal()">
+        </div>
+        <button class="btn btn-secondary btn-lg" style="width:100%;" onclick="handleRestoreLocal()">Restore from File</button>
+      </form>
+
+      <form id="restoreGistForm" class="hidden" onsubmit="return false;">
+        <div class="form-group">
+          <label for="restoreGistToken">GitHub Token</label>
+          <input type="password" id="restoreGistToken" placeholder="Paste your GitHub personal access token" required autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="restoreGistId">Gist ID</label>
+          <input type="text" id="restoreGistId" placeholder="Paste your Gist ID" required autocomplete="off">
+        </div>
+        <div class="form-group hidden" id="restoreGistPasswordGroup">
+          <label for="restoreGistPassword">Backup Password</label>
+          <input type="password" id="restoreGistPassword" placeholder="Enter backup password if encrypted" autocomplete="new-password" onkeydown="if(event.key==='Enter')handleRestoreGist()">
+        </div>
+        <button class="btn btn-secondary btn-lg" style="width:100%;" onclick="handleRestoreGist()">Restore from Gist</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    function showLoginForm() {
+      document.getElementById('loginForm').classList.remove('hidden');
+      document.getElementById('registerForm').classList.add('hidden');
+      document.getElementById('loginTab').classList.add('active');
+      document.getElementById('registerTab').classList.remove('active');
+    }
+
+    function showRegisterForm() {
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('registerForm').classList.remove('hidden');
+      document.getElementById('loginTab').classList.remove('active');
+      document.getElementById('registerTab').classList.add('active');
+    }
+
+    async function handleLogin() {
+      const username = document.getElementById('loginUsername').value.trim().toLowerCase();
+      const password = document.getElementById('loginPassword').value;
+      if (!username || !password) {
+        showToast('Please enter both username and password', 'warning');
+        return;
+      }
+      const result = await loginUser(username, password);
+      if (result.success) {
+        window.location.href = 'index.html';
+      } else {
+        showToast(result.message, 'error');
+      }
+    }
+
+    async function handleRegister() {
+      const username = document.getElementById('registerUsername').value.trim().toLowerCase();
+      const password = document.getElementById('registerPassword').value;
+      const confirm = document.getElementById('registerConfirmPassword').value;
+      if (!username || !password) {
+        showToast('Please fill in all fields', 'warning');
+        return;
+      }
+      if (password !== confirm) {
+        showToast('Passwords do not match', 'error');
+        return;
+      }
+      if (password.length < 6) {
+        showToast('Password must be at least 6 characters', 'warning');
+        return;
+      }
+      const result = await registerUser(username, password);
+      if (result.success) {
+        showToast('Account created successfully! Logging in...', 'success');
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 800);
+      } else {
+        showToast(result.message, 'error');
+      }
+    }
+
+    // Restore UI helpers
+    function showRestoreLocal() {
+      document.getElementById('restoreLocalForm').classList.remove('hidden');
+      document.getElementById('restoreGistForm').classList.add('hidden');
+      document.getElementById('restoreLocalTab').classList.add('active');
+      document.getElementById('restoreGistTab').classList.remove('active');
+    }
+
+    function showRestoreGist() {
+      document.getElementById('restoreLocalForm').classList.add('hidden');
+      document.getElementById('restoreGistForm').classList.remove('hidden');
+      document.getElementById('restoreLocalTab').classList.remove('active');
+      document.getElementById('restoreGistTab').classList.add('active');
+    }
+
+    async function handleRestoreLocal() {
+      const btn = document.querySelector('#restoreLocalForm button');
+      const fileInput = document.getElementById('restoreFile');
+      const file = fileInput.files[0];
+      if (!file) {
+        showToast('Please select a backup file', 'warning');
+        return;
+      }
+      if (btn) { btn.disabled = true; btn.textContent = 'Restoring...'; }
+      try {
+        const content = await readFileAsText(file);
+        const isEncrypted = isEncryptedData(content);
+        let data;
+        if (isEncrypted) {
+          const password = document.getElementById('restoreLocalPassword').value;
+          if (!password) {
+            showToast('This backup is encrypted. Please enter the backup password.', 'warning');
+            document.getElementById('restoreLocalPasswordGroup').classList.remove('hidden');
+            document.getElementById('restoreLocalPassword').focus();
+            return;
+          }
+          data = await decryptData(content, password);
+        } else {
+          data = JSON.parse(content);
+        }
+        if (!validateBackupData(data)) return;
+        if (isLoggedIn()) {
+          promptRestoreToCurrentAccount(data);
+        } else {
+          await promptRegisterAndRestore(data);
+        }
+      } catch (err) {
+        showToast('Failed to restore: ' + err.message, 'error');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Restore from File'; }
+      }
+    }
+
+    async function handleRestoreGist() {
+      const btn = document.querySelector('#restoreGistForm button');
+      const token = document.getElementById('restoreGistToken').value.trim();
+      const gistId = document.getElementById('restoreGistId').value.trim();
+      if (!token || !gistId) {
+        showToast('Please enter both GitHub token and Gist ID', 'warning');
+        return;
+      }
+      if (btn) { btn.disabled = true; btn.textContent = 'Restoring...'; }
+      try {
+        const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/vnd.github+json'
+          }
+        });
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.message || `HTTP ${response.status}`);
+        }
+        const result = await response.json();
+        const file = Object.values(result.files)[0];
+        if (!file) throw new Error('No files found in Gist');
+        let content = file.content;
+        if (file.truncated) {
+          const rawResponse = await fetch(file.raw_url);
+          content = await rawResponse.text();
+        }
+        const isEncrypted = isEncryptedData(content);
+        let data;
+        if (isEncrypted) {
+          const password = document.getElementById('restoreGistPassword').value;
+          if (!password) {
+            showToast('This backup is encrypted. Please enter the backup password.', 'warning');
+            document.getElementById('restoreGistPasswordGroup').classList.remove('hidden');
+            document.getElementById('restoreGistPassword').focus();
+            return;
+          }
+          data = await decryptData(content, password);
+        } else {
+          data = JSON.parse(content);
+        }
+        if (!validateBackupData(data)) return;
+        if (isLoggedIn()) {
+          await promptRestoreToCurrentAccount(data, token, gistId);
+        } else {
+          await promptRegisterAndRestore(data, token, gistId);
+        }
+      } catch (err) {
+        showToast('Failed to restore from Gist: ' + err.message, 'error');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Restore from Gist'; }
+      }
+    }
+
+    function readFileAsText(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsText(file);
+      });
+    }
+
+    function validateBackupData(data) {
+      if (!data || !data.portfolios || !data.holdings || !data.transactions || !data.settings) {
+        showToast('Invalid backup file format', 'error');
+        return false;
+      }
+      return true;
+    }
+
+    async function promptRegisterAndRestore(data, gistToken, gistId) {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay active';
+      overlay.style.zIndex = '400';
+      overlay.innerHTML = `
+        <div class="modal" style="max-width:400px;">
+          <div class="modal-body" style="text-align:center;">
+            <h3 style="margin-bottom:8px;">Create Account to Save Data</h3>
+            <p style="color:var(--text-muted); margin-bottom:16px; font-size:0.9rem;">Your backup has been loaded. Create a username and password to secure it.</p>
+            <div class="form-group" style="text-align:left;">
+              <label for="restoreUsername">Username</label>
+              <input type="text" id="restoreUsername" placeholder="Choose a username" required>
+            </div>
+            <div class="form-group" style="text-align:left;">
+              <label for="restorePassword">Password</label>
+              <input type="password" id="restorePassword" placeholder="Choose a password" required>
+            </div>
+            <div class="form-group" style="text-align:left;">
+              <label for="restoreConfirmPassword">Confirm Password</label>
+              <input type="password" id="restoreConfirmPassword" placeholder="Confirm password" required>
+            </div>
+            <div style="display:flex; gap:12px; justify-content:center; margin-top:16px;">
+              <button class="btn btn-secondary" id="restoreCancel">Cancel</button>
+              <button class="btn btn-primary" id="restoreConfirm">Create Account & Restore</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      document.body.style.overflow = 'hidden';
+      document.getElementById('restoreUsername').focus();
+
+      function close() {
+        overlay.remove();
+        document.body.style.overflow = '';
+      }
+
+      document.getElementById('restoreCancel').addEventListener('click', close);
+      const submitRestore = async () => {
+        const username = document.getElementById('restoreUsername').value.trim().toLowerCase();
+        const password = document.getElementById('restorePassword').value;
+        const confirm = document.getElementById('restoreConfirmPassword').value;
+        if (!username || !password) {
+          showToast('Please fill in all fields', 'warning');
+          return;
+        }
+        if (password !== confirm) {
+          showToast('Passwords do not match', 'error');
+          return;
+        }
+        if (password.length < 6) {
+          showToast('Password must be at least 6 characters', 'warning');
+          return;
+        }
+        const result = await registerUser(username, password);
+        if (result.success) {
+          appData = data;
+          if (gistToken) appData.settings.gistToken = gistToken;
+          if (gistId) appData.settings.gistId = gistId;
+          saveData(appData);
+          close();
+          showToast('Account created and backup restored successfully!', 'success');
+          setTimeout(() => {
+            window.location.href = 'index.html';
+          }, 800);
+        } else {
+          showToast(result.message, 'error');
+        }
+      };
+      document.getElementById('restoreConfirm').addEventListener('click', submitRestore);
+      document.getElementById('restorePassword').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') submitRestore();
+      });
+      document.getElementById('restoreConfirmPassword').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') submitRestore();
+      });
+    }
+
+    function promptRestoreToCurrentAccount(data, gistToken, gistId) {
+      confirmDialog('Restoring this backup will overwrite all your current portfolios, holdings, transactions, and settings. This cannot be undone. Are you sure?', async () => {
+        appData = data;
+        if (gistToken) appData.settings.gistToken = gistToken;
+        if (gistId) appData.settings.gistId = gistId;
+        saveData(appData);
+        showToast('Backup restored to your account successfully!', 'success');
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 800);
+      });
+    }
+
+    function initLoginPage() {
+      const user = getCurrentUser();
+      if (user) {
+        document.getElementById('loggedInBanner').classList.remove('hidden');
+        document.getElementById('loggedInUsername').textContent = user;
+        document.getElementById('restoreSubtitle').textContent = 'Restoring will overwrite your current data';
+        // Hide login/register forms when logged in
+        document.querySelector('.login-card').style.display = 'none';
+      }
+    }
+
+    initLoginPage();
+  </script>
+</body>
+</html>

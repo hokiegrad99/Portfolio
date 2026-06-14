@@ -1,0 +1,18 @@
+{
+  "portfolios": [
+    {"id": "test-p1", "name": "Test Portfolio", "brokerage": "Vanguard"}
+  ],
+  "holdings": [
+    {"id": "test-h1", "portfolioId": "test-p1", "symbol": "AAPL", "name": "Apple Inc.", "shares": 100, "avgCost": 150.00, "currentPrice": 175.00}
+  ],
+  "transactions": [
+    {"id": "test-t1", "portfolioId": "test-p1", "holdingId": "test-h1", "date": "2024-01-15", "type": "buy", "shares": 100, "price": 150.00, "amount": 0, "dividendType": null, "notes": "Test purchase"}
+  ],
+  "settings": {
+    "defaultPortfolioId": "test-p1",
+    "gistToken": "",
+    "gistId": "",
+    "currency": "USD"
+  },
+  "initialized": true
+}

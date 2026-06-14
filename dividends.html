@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Track dividend income with tax classification. View qualified vs ordinary dividends for tax planning.">
+  <title>Dividends - Portfolio Tracker</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1><span class="icon">📊</span> Portfolio Tracker</h1>
+      </div>
+      <nav class="sidebar-nav">
+        <ul>
+          <li><a href="index.html"><span class="nav-icon">🏠</span> Dashboard</a></li>
+          <li><a href="holdings.html"><span class="nav-icon">📈</span> Holdings</a></li>
+          <li><a href="transactions.html"><span class="nav-icon">📝</span> Transactions</a></li>
+          <li><a href="dividends.html" class="active"><span class="nav-icon">💰</span> Dividends</a></li>
+          <li><a href="calendar.html"><span class="nav-icon">📅</span> Calendar</a></li>
+          <li><a href="reports.html"><span class="nav-icon">📉</span> Reports</a></li>
+          <li><a href="settings.html"><span class="nav-icon">⚙️</span> Settings</a></li>
+        </ul>
+      </nav>
+      <div class="sidebar-user">
+        <div class="sidebar-user-info">
+          <span>👤</span>
+          <span class="sidebar-user-name" id="userInfo">User</span>
+        </div>
+        <div class="sidebar-user-actions">
+          <button class="sidebar-btn" id="themeToggle" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
+          <button class="sidebar-btn" onclick="logoutUser()" title="Logout">🚪</button>
+        </div>
+      </div>
+      <div class="sidebar-footer">
+        <p>v1.0 &middot; Free Portfolio Tracker</p>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="top-header">
+        <button class="mobile-toggle">☰</button>
+        <h2>Dividends</h2>
+        <div class="header-actions">
+          <div class="portfolio-selector">
+            <label for="portfolioSelector">Portfolio:</label>
+            <select id="portfolioSelector" class="select-styled">
+              <option value="">All Portfolios</option>
+            </select>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="themeToggleHeader" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="page-header">
+          <h2>Dividend Income</h2>
+          <p>Track your dividend payments with tax classification</p>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="summary-cards">
+          <div class="summary-card">
+            <div class="label">Total Dividends</div>
+            <div class="value" id="divTotal">$0.00</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Qualified</div>
+            <div class="value text-success" id="divQualified">$0.00</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Ordinary</div>
+            <div class="value text-warning" id="divOrdinary">$0.00</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">This Year</div>
+            <div class="value" id="divThisYear">$0.00</div>
+          </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-row">
+          <div class="card">
+            <div class="card-header">
+              <h3>Dividend Income by Year</h3>
+            </div>
+            <div class="card-body">
+              <div class="chart-container">
+                <canvas id="annualDividendChart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3>Qualified vs Ordinary by Year</h3>
+            </div>
+            <div class="card-body">
+              <div class="chart-container">
+                <canvas id="dividendTypeYearChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Monthly Dividends by Year (3 Years) -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h3>Monthly Dividends by Year</h3>
+          </div>
+          <div class="card-body">
+            <div class="chart-container">
+              <canvas id="monthly3YearChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dividend Transactions Table -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Dividend Payments</h3>
+          </div>
+          <div class="card-body">
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Portfolio</th>
+                    <th>Symbol</th>
+                    <th>Amount</th>
+                    <th>Type</th>
+                    <th>Notes</th>
+                    <th class="text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="dividendsTable">
+                  <tr>
+                    <td colspan="7" class="text-center text-muted">No dividend payments yet</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/dividends.js"></script>
+</body>
+</html>

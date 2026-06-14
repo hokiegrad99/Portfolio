@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Dividend calendar showing expected upcoming dividend payments based on historical patterns.">
+  <title>Calendar - Portfolio Tracker</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1><span class="icon">📊</span> Portfolio Tracker</h1>
+      </div>
+      <nav class="sidebar-nav">
+        <ul>
+          <li><a href="index.html"><span class="nav-icon">🏠</span> Dashboard</a></li>
+          <li><a href="holdings.html"><span class="nav-icon">📈</span> Holdings</a></li>
+          <li><a href="transactions.html"><span class="nav-icon">📝</span> Transactions</a></li>
+          <li><a href="dividends.html"><span class="nav-icon">💰</span> Dividends</a></li>
+          <li><a href="calendar.html" class="active"><span class="nav-icon">📅</span> Calendar</a></li>
+          <li><a href="reports.html"><span class="nav-icon">📉</span> Reports</a></li>
+          <li><a href="settings.html"><span class="nav-icon">⚙️</span> Settings</a></li>
+        </ul>
+      </nav>
+      <div class="sidebar-user">
+        <div class="sidebar-user-info">
+          <span>👤</span>
+          <span class="sidebar-user-name" id="userInfo">User</span>
+        </div>
+        <div class="sidebar-user-actions">
+          <button class="sidebar-btn" id="themeToggle" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
+          <button class="sidebar-btn" onclick="logoutUser()" title="Logout">🚪</button>
+        </div>
+      </div>
+      <div class="sidebar-footer">
+        <p>v1.0 &middot; Free Portfolio Tracker</p>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="top-header">
+        <button class="mobile-toggle">☰</button>
+        <h2>Dividend Calendar</h2>
+        <div class="header-actions">
+          <div class="portfolio-selector">
+            <label for="portfolioSelector">Portfolio:</label>
+            <select id="portfolioSelector" class="select-styled">
+              <option value="">All Portfolios</option>
+            </select>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="themeToggleHeader" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="page-header">
+          <h2>Expected Dividend Payments</h2>
+          <p>Upcoming dividends based on historical payment patterns</p>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="summary-cards">
+          <div class="summary-card">
+            <div class="label">Expected Next 3 Months</div>
+            <div class="value" id="calendarNext3Months">$0.00</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Expected Next 6 Months</div>
+            <div class="value" id="calendarNext6Months">$0.00</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Expected Next 12 Months</div>
+            <div class="value" id="calendarNext12Months">$0.00</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Upcoming Payments</div>
+            <div class="value" id="calendarUpcomingCount">0</div>
+          </div>
+        </div>
+
+        <!-- Calendar Grid -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h3 id="calendarMonthTitle">June 2026</h3>
+            <div class="flex gap-2">
+              <button class="btn btn-sm btn-ghost" onclick="changeCalendarMonth(-1)">← Prev</button>
+              <button class="btn btn-sm btn-ghost" onclick="changeCalendarMonth(1)">Next →</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="calendar-grid" id="calendarGrid">
+              <!-- Calendar rendered by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Upcoming Payments List -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Upcoming Payments</h3>
+          </div>
+          <div class="card-body">
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Expected Date</th>
+                    <th>Symbol</th>
+                    <th>Portfolio</th>
+                    <th>Expected Amount</th>
+                    <th>Type</th>
+                    <th>Pattern</th>
+                  </tr>
+                </thead>
+                <tbody id="upcomingPaymentsTable">
+                  <tr>
+                    <td colspan="6" class="text-center text-muted">No dividend history to predict upcoming payments</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/calendar.js"></script>
+</body>
+</html>
