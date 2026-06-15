@@ -54,6 +54,8 @@
           </div>
           <button class="btn btn-ghost btn-sm" id="themeToggleHeader" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
           <button class="btn btn-secondary btn-sm" id="refreshPricesBtn" onclick="refreshPricesOnPage()">🔄 Refresh Prices</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportHoldingsToCSV()">📥 Export CSV</button>
+          <button class="btn btn-ghost btn-sm" onclick="openImportHoldingsCSVModal()">📤 Import CSV</button>
           <button class="btn btn-primary btn-sm" onclick="openAddHoldingModal()">+ Add Holding</button>
         </div>
       </header>
@@ -143,6 +145,46 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="hideModal('holdingModal')">Cancel</button>
         <button class="btn btn-primary" onclick="saveHolding()">Save Holding</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Holdings CSV Modal -->
+  <div class="modal-overlay" id="importHoldingsCSVModal" role="dialog" aria-modal="true" aria-labelledby="importHoldingsCSVModalTitle">
+    <div class="modal" style="max-width:720px;">
+      <div class="modal-header">
+        <h3 id="importHoldingsCSVModalTitle">Import Holdings from CSV</h3>
+        <button class="modal-close" onclick="hideModal('importHoldingsCSVModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;">
+          <div class="form-group" style="flex:1;min-width:220px;">
+            <label for="holdingsCSVFile">Select CSV File</label>
+            <input type="file" id="holdingsCSVFile" accept=".csv" onchange="previewHoldingsCSV()">
+            <small style="color:var(--text-muted);display:block;margin-top:6px;">Required columns: <b>portfolio, symbol, shares, avgCost</b>. Optional: <b>name, currentPrice</b>.</small>
+          </div>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="downloadHoldingsCSVTemplate()" style="margin-bottom:4px;">📄 Download Template</button>
+        </div>
+        <div id="holdingsCSVPreview" class="hidden" style="margin-top:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <strong>Preview (<span id="holdingsCSVPreviewCount">0</span> rows)</strong>
+            <label style="font-size:0.85rem;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
+              <input type="checkbox" id="holdingsCSVSkipDuplicates" checked>
+              Skip duplicate symbols
+            </label>
+          </div>
+          <div class="table-container" style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);">
+            <table class="csv-preview-table">
+              <thead id="holdingsCSVPreviewHead"></thead>
+              <tbody id="holdingsCSVPreviewBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="holdingsCSVResult" class="hidden" style="margin-top:12px;padding:12px;border-radius:var(--radius);background:var(--bg);"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="hideModal('importHoldingsCSVModal')">Cancel</button>
+        <button class="btn btn-primary" id="holdingsCSVImportBtn" onclick="importHoldingsFromCSV()" disabled>Import</button>
       </div>
     </div>
   </div>

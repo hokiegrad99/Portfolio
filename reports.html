@@ -53,6 +53,14 @@
               <option value="">All Portfolios</option>
             </select>
           </div>
+          <div class="year-selector">
+            <label for="yearSelector">Year:</label>
+            <select id="yearSelector" class="select-styled">
+              <option value="">All Years</option>
+            </select>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="downloadReportCSV" onclick="downloadReportCSV()" title="Download CSV">📥 CSV</button>
+          <button class="btn btn-ghost btn-sm" id="printReportBtn" onclick="printReport()" title="Print / Save as PDF">🖨️ Print</button>
           <button class="btn btn-ghost btn-sm" id="themeToggleHeader" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
         </div>
       </header>
@@ -61,6 +69,25 @@
         <div class="page-header">
           <h2>Income Reports</h2>
           <p>Visualize your portfolio and dividend income over time</p>
+        </div>
+
+        <div class="summary-cards" id="reportSummaryCards">
+          <div class="summary-card">
+            <div class="label">Total Dividends</div>
+            <div class="value" id="summaryTotalDividends">$0.00</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Qualified</div>
+            <div class="value" id="summaryQualified">$0.00</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Ordinary</div>
+            <div class="value" id="summaryOrdinary">$0.00</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Payments</div>
+            <div class="value" id="summaryPayments">0</div>
+          </div>
         </div>
 
         <div class="tabs">
@@ -75,6 +102,20 @@
           <div class="card">
             <div class="card-header">
               <h3>Monthly Dividend Income</h3>
+              <div style="display:flex;gap:16px;align-items:center;">
+                <label class="toggle-compare">
+                  <input type="checkbox" id="compareYearsToggle" onchange="toggleCompareYears()">
+                  Compare Years
+                </label>
+                <label class="toggle-compare">
+                  <input type="checkbox" id="comparePortfoliosToggle" onchange="toggleComparePortfolios()">
+                  Compare Portfolios
+                </label>
+                <label class="toggle-compare">
+                  <input type="checkbox" id="trendLineToggle" onchange="toggleTrendLine()">
+                  Trend Line
+                </label>
+              </div>
             </div>
             <div class="card-body">
               <div class="chart-container large">

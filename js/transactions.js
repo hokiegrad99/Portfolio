@@ -361,6 +361,232 @@ if (document.readyState === 'loading') {
   checkEditFromSession();
 }
 
+let pendingTransactionsCSV = { headers: [], rows: [] };
+
+function openImportTransactionsCSVModal() {
+  document.getElementById('transactionsCSVFile').value = '';
+  document.getElementById('transactionsCSVPreview').classList.add('hidden');
+  document.getElementById('transactionsCSVResult').classList.add('hidden');
+  document.getElementById('transactionsCSVImportBtn').disabled = true;
+  pendingTransactionsCSV = { headers: [], rows: [] };
+  showModal('importTransactionsCSVModal');
+}
+
+function previewTransactionsCSV() {
+  const fileInput = document.getElementById('transactionsCSVFile');
+  const preview = document.getElementById('transactionsCSVPreview');
+  const result = document.getElementById('transactionsCSVResult');
+  const importBtn = document.getElementById('transactionsCSVImportBtn');
+  const countEl = document.getElementById('transactionsCSVPreviewCount');
+  const head = document.getElementById('transactionsCSVPreviewHead');
+  const body = document.getElementById('transactionsCSVPreviewBody');
+
+  const file = fileInput.files[0];
+  if (!file) {
+    preview.classList.add('hidden');
+    result.classList.add('hidden');
+    importBtn.disabled = true;
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const parsed = parseCSV(e.target.result);
+    pendingTransactionsCSV = parsed;
+
+    const required = ['portfolio', 'symbol', 'date', 'type'];
+    const missing = required.filter(h => !parsed.headers.includes(h));
+    if (missing.length > 0) {
+      result.classList.remove('hidden');
+      result.innerHTML = `<span style="color:var(--danger);">Missing required columns: ${missing.join(', ')}</span>`;
+      preview.classList.add('hidden');
+      importBtn.disabled = true;
+      return;
+    }
+
+    result.classList.add('hidden');
+    preview.classList.remove('hidden');
+    countEl.textContent = parsed.rows.length;
+
+    head.innerHTML = `<tr>${parsed.headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr>`;
+    body.innerHTML = parsed.rows.slice(0, 5).map(row => {
+      return `<tr>${parsed.headers.map(h => `<td>${escapeHtml(row[h] || '')}</td>`).join('')}</tr>`;
+    }).join('') + (parsed.rows.length > 5 ? `<tr><td colspan="${parsed.headers.length}" style="text-align:center;color:var(--text-muted);">...and ${parsed.rows.length - 5} more rows</td></tr>` : '');
+
+    importBtn.disabled = parsed.rows.length === 0;
+  };
+  reader.onerror = () => {
+    result.classList.remove('hidden');
+    result.innerHTML = `<span style="color:var(--danger);">Failed to read file</span>`;
+    preview.classList.add('hidden');
+    importBtn.disabled = true;
+  };
+  reader.readAsText(file);
+}
+
+function exportTransactionsToCSV() {
+  const portfolioId = getSelectedPortfolioId();
+  let txs = portfolioId ? getPortfolioTransactions(portfolioId) : [...appData.transactions];
+  txs.sort((a, b) => a.date.localeCompare(b.date));
+  const headers = ['portfolio', 'symbol', 'date', 'type', 'shares', 'price', 'amount', 'dividendType', 'notes'];
+  const rows = txs.map(tx => {
+    const portfolio = getPortfolio(tx.portfolioId);
+    const holding = getHolding(tx.holdingId);
+    const isDividend = tx.type === 'dividend';
+    return [
+      portfolio ? portfolio.name : '',
+      holding ? holding.symbol : '',
+      tx.date,
+      tx.type,
+      !isDividend && tx.shares != null ? tx.shares.toFixed(4) : '',
+      !isDividend && tx.price != null ? tx.price.toFixed(2) : '',
+      isDividend && tx.amount != null ? tx.amount.toFixed(2) : '',
+      tx.dividendType || '',
+      tx.notes || ''
+    ];
+  });
+  if (rows.length === 0) {
+    showToast('No transactions to export', 'warning');
+    return;
+  }
+  downloadCSVTemplate('transactions.csv', headers, rows, 'Transactions exported');
+}
+
+function downloadTransactionsCSVTemplate() {
+  const headers = ['portfolio', 'symbol', 'date', 'type', 'shares', 'price', 'amount', 'dividendType', 'notes'];
+  const rows = [
+    ['My Portfolio', 'AAPL', '2024-01-15', 'buy', '10', '150.00', '', '', 'Initial position'],
+    ['My Portfolio', 'AAPL', '2024-03-15', 'dividend', '', '', '12.50', 'qualified', 'Quarterly dividend'],
+    ['My Portfolio', 'MSFT', '2024-02-10', 'buy', '5', '300.00', '', '', ''],
+    ['Retirement', 'VTI', '2024-01-20', 'buy', '25', '220.00', '', '', 'Monthly contribution']
+  ];
+  downloadCSVTemplate('transactions_template.csv', headers, rows, 'Transactions template');
+}
+
+function importTransactionsFromCSV() {
+  const { rows } = pendingTransactionsCSV;
+  const skipDuplicates = document.getElementById('transactionsCSVSkipDuplicates').checked;
+  const result = document.getElementById('transactionsCSVResult');
+  let imported = 0;
+  let skipped = 0;
+  let errors = 0;
+  const importedHoldingIds = new Set();
+
+  rows.forEach(row => {
+    const portfolioName = (row.portfolio || '').trim();
+    const symbol = (row.symbol || '').trim().toUpperCase();
+    const date = (row.date || '').trim();
+    const type = (row.type || '').trim().toLowerCase();
+    const notes = (row.notes || '').trim();
+    const dividendType = (row.dividendType || '').trim().toLowerCase() || null;
+
+    if (!portfolioName || !symbol || !date || !type) {
+      errors++;
+      return;
+    }
+    if (!isValidDate(date)) {
+      errors++;
+      return;
+    }
+    if (!['initial', 'buy', 'sell', 'dividend'].includes(type)) {
+      errors++;
+      return;
+    }
+
+    // Find or create portfolio
+    let portfolio = appData.portfolios.find(p => p.name.toLowerCase() === portfolioName.toLowerCase());
+    if (!portfolio) {
+      portfolio = { id: createId(), name: portfolioName, brokerage: 'Other' };
+      appData.portfolios.push(portfolio);
+    }
+
+    // Find or create holding
+    let holding = appData.holdings.find(h => h.portfolioId === portfolio.id && h.symbol.toUpperCase() === symbol);
+    if (!holding) {
+      const price = parseFloat(row.price) || parseFloat(row.avgCost) || 0;
+      holding = {
+        id: createId(),
+        portfolioId: portfolio.id,
+        symbol,
+        name: symbol,
+        shares: 0,
+        avgCost: price,
+        currentPrice: price
+      };
+      appData.holdings.push(holding);
+    }
+
+    // Build transaction data
+    let txData = {
+      portfolioId: portfolio.id,
+      holdingId: holding.id,
+      date,
+      type,
+      notes,
+      dividendType: type === 'dividend' ? dividendType : null,
+      shares: 0,
+      price: 0,
+      amount: 0
+    };
+
+    if (type === 'dividend') {
+      const amount = parseFloat(row.amount);
+      if (isNaN(amount) || amount <= 0) {
+        errors++;
+        return;
+      }
+      txData.amount = amount;
+      txData.shares = 0;
+      txData.price = 0;
+    } else {
+      const shares = parseFloat(row.shares);
+      const price = parseFloat(row.price);
+      if (isNaN(shares) || shares <= 0 || isNaN(price) || price <= 0) {
+        errors++;
+        return;
+      }
+      txData.shares = shares;
+      txData.price = price;
+    }
+
+    // Check for duplicates (include notes for a more precise fingerprint)
+    if (skipDuplicates) {
+      const duplicate = appData.transactions.find(t =>
+        t.portfolioId === txData.portfolioId &&
+        t.holdingId === txData.holdingId &&
+        t.date === txData.date &&
+        t.type === txData.type &&
+        (t.amount || 0) === (txData.amount || 0) &&
+        (t.shares || 0) === (txData.shares || 0) &&
+        (t.notes || '') === (txData.notes || '')
+      );
+      if (duplicate) {
+        skipped++;
+        return;
+      }
+    }
+
+    txData.id = createId();
+    appData.transactions.push(txData);
+    importedHoldingIds.add(holding.id);
+    imported++;
+  });
+
+  // Recalc only holdings affected by the import
+  importedHoldingIds.forEach(hid => recalcHoldingFromTransactions(hid));
+
+  saveData(appData);
+  result.classList.remove('hidden');
+  result.innerHTML = `
+    <span style="color:var(--success);">${imported} imported</span>
+    ${skipped > 0 ? `<span style="color:var(--warning);"> &middot; ${skipped} skipped</span>` : ''}
+    ${errors > 0 ? `<span style="color:var(--danger);"> &middot; ${errors} errors</span>` : ''}
+  `;
+  document.getElementById('transactionsCSVImportBtn').disabled = true;
+  refreshPageData();
+  showToast(`Imported ${imported} transactions`, 'success');
+}
+
 function checkEditFromSession() {
   const editId = sessionStorage.getItem('editTransactionId');
   if (editId) {

@@ -102,6 +102,17 @@
             <input type="file" id="importFile" accept=".json" style="display:none;" onchange="handleImportFile(this)">
             <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">Upload JSON File</button>
           </div>
+          <div class="import-export-card">
+            <h3>📄 Export Full Portfolio CSV</h3>
+            <p>Download a single CSV file with all portfolios, holdings, and transactions. Edit externally and re-import later.</p>
+            <button class="btn btn-primary" onclick="exportFullPortfolioCSV()">Download Full Portfolio CSV</button>
+          </div>
+          <div class="import-export-card">
+            <h3>📂 Import Full Portfolio CSV</h3>
+            <p>Import a previously exported full portfolio CSV file. Portfolios, holdings, and transactions will be restored.</p>
+            <input type="file" id="importFullPortfolioFile" accept=".csv" style="display:none;" onchange="handleFullPortfolioCSVImport(this)">
+            <button class="btn btn-secondary" onclick="document.getElementById('importFullPortfolioFile').click()">Upload Full Portfolio CSV</button>
+          </div>
         </div>
 
         <!-- GitHub Gist Integration -->
@@ -190,8 +201,15 @@
           <div class="card-body">
             <div class="flex items-center justify-between" style="margin-bottom:16px;">
               <div>
-                <h4 style="font-size:1rem; margin-bottom:4px;">Reset All Data</h4>
-                <p style="color:var(--text-muted); font-size:0.85rem;">This will permanently delete all your portfolios, holdings, and transactions. This cannot be undone.</p>
+                <h4 style="font-size:1rem; margin-bottom:4px;">Clear All Data</h4>
+                <p style="color:var(--text-muted); font-size:0.85rem;">Permanently delete all your portfolios, holdings, and transactions. This leaves the app completely empty. This cannot be undone.</p>
+              </div>
+              <button class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
+            </div>
+            <div class="flex items-center justify-between" style="margin-bottom:16px;">
+              <div>
+                <h4 style="font-size:1rem; margin-bottom:4px;">Reset Data</h4>
+                <p style="color:var(--text-muted); font-size:0.85rem;">Delete all your data and restore the default sample data. Useful for getting started fresh.</p>
               </div>
               <button class="btn btn-danger" onclick="resetAllData()">Reset Data</button>
             </div>
@@ -206,6 +224,30 @@
         </div>
       </div>
     </main>
+  </div>
+
+  <!-- Import Full Portfolio CSV Modal -->
+  <div class="modal-overlay" id="importFullPortfolioModal" role="dialog" aria-modal="true" aria-labelledby="importFullPortfolioModalTitle">
+    <div class="modal" style="max-width:600px;">
+      <div class="modal-header">
+        <h3 id="importFullPortfolioModalTitle">Import Full Portfolio CSV</h3>
+        <button class="modal-close" onclick="hideModal('importFullPortfolioModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="importFullPortfolioPreview">
+          <p class="text-muted">Loading preview...</p>
+        </div>
+        <div class="form-group" style="margin-top:16px;">
+          <label>
+            <input type="checkbox" id="importFullPortfolioReplace"> Replace all existing data (check to clear current data before importing)
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="hideModal('importFullPortfolioModal')">Cancel</button>
+        <button class="btn btn-primary" id="importFullPortfolioConfirmBtn" onclick="confirmImportFullPortfolioCSV()">Import</button>
+      </div>
+    </div>
   </div>
 
   <!-- Add/Edit Portfolio Modal -->

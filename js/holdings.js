@@ -202,6 +202,164 @@ function deleteHoldingPrompt(id) {
   });
 }
 
+let pendingHoldingsCSV = { headers: [], rows: [] };
+
+function openImportHoldingsCSVModal() {
+  document.getElementById('holdingsCSVFile').value = '';
+  document.getElementById('holdingsCSVPreview').classList.add('hidden');
+  document.getElementById('holdingsCSVResult').classList.add('hidden');
+  document.getElementById('holdingsCSVImportBtn').disabled = true;
+  pendingHoldingsCSV = { headers: [], rows: [] };
+  showModal('importHoldingsCSVModal');
+}
+
+function previewHoldingsCSV() {
+  const fileInput = document.getElementById('holdingsCSVFile');
+  const preview = document.getElementById('holdingsCSVPreview');
+  const result = document.getElementById('holdingsCSVResult');
+  const importBtn = document.getElementById('holdingsCSVImportBtn');
+  const countEl = document.getElementById('holdingsCSVPreviewCount');
+  const head = document.getElementById('holdingsCSVPreviewHead');
+  const body = document.getElementById('holdingsCSVPreviewBody');
+
+  const file = fileInput.files[0];
+  if (!file) {
+    preview.classList.add('hidden');
+    result.classList.add('hidden');
+    importBtn.disabled = true;
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const parsed = parseCSV(e.target.result);
+    pendingHoldingsCSV = parsed;
+
+    const required = ['portfolio', 'symbol', 'shares', 'avgCost'];
+    const missing = required.filter(h => !parsed.headers.includes(h));
+    if (missing.length > 0) {
+      result.classList.remove('hidden');
+      result.innerHTML = `<span style="color:var(--danger);">Missing required columns: ${missing.join(', ')}</span>`;
+      preview.classList.add('hidden');
+      importBtn.disabled = true;
+      return;
+    }
+
+    result.classList.add('hidden');
+    preview.classList.remove('hidden');
+    countEl.textContent = parsed.rows.length;
+
+    // Show preview table with first 5 rows
+    head.innerHTML = `<tr>${parsed.headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr>`;
+    body.innerHTML = parsed.rows.slice(0, 5).map(row => {
+      return `<tr>${parsed.headers.map(h => `<td>${escapeHtml(row[h] || '')}</td>`).join('')}</tr>`;
+    }).join('') + (parsed.rows.length > 5 ? `<tr><td colspan="${parsed.headers.length}" style="text-align:center;color:var(--text-muted);">...and ${parsed.rows.length - 5} more rows</td></tr>` : '');
+
+    importBtn.disabled = parsed.rows.length === 0;
+  };
+  reader.onerror = () => {
+    result.classList.remove('hidden');
+    result.innerHTML = `<span style="color:var(--danger);">Failed to read file</span>`;
+    preview.classList.add('hidden');
+    importBtn.disabled = true;
+  };
+  reader.readAsText(file);
+}
+
+function exportHoldingsToCSV() {
+  const portfolioId = getSelectedPortfolioId();
+  const holdings = portfolioId ? getPortfolioHoldings(portfolioId) : [...appData.holdings];
+  const headers = ['portfolio', 'symbol', 'shares', 'avgCost', 'name', 'currentPrice'];
+  const rows = holdings.map(h => {
+    const portfolio = getPortfolio(h.portfolioId);
+    return [
+      portfolio ? portfolio.name : '',
+      h.symbol,
+      h.shares.toFixed(4),
+      h.avgCost.toFixed(2),
+      h.name || '',
+      h.currentPrice != null ? h.currentPrice.toFixed(2) : ''
+    ];
+  });
+  if (rows.length === 0) {
+    showToast('No holdings to export', 'warning');
+    return;
+  }
+  downloadCSVTemplate('holdings.csv', headers, rows, 'Holdings exported');
+}
+
+function downloadHoldingsCSVTemplate() {
+  const headers = ['portfolio', 'symbol', 'shares', 'avgCost', 'name', 'currentPrice'];
+  const rows = [
+    ['My Portfolio', 'AAPL', '10', '150.00', 'Apple Inc.', '175.00'],
+    ['My Portfolio', 'MSFT', '5', '300.00', 'Microsoft Corp.', '330.00'],
+    ['Retirement', 'VTI', '25', '220.00', 'Vanguard Total Stock', '245.00']
+  ];
+  downloadCSVTemplate('holdings_template.csv', headers, rows, 'Holdings template');
+}
+
+function importHoldingsFromCSV() {
+  const { rows } = pendingHoldingsCSV;
+  const skipDuplicates = document.getElementById('holdingsCSVSkipDuplicates').checked;
+  const result = document.getElementById('holdingsCSVResult');
+  let imported = 0;
+  let skipped = 0;
+  let errors = 0;
+
+  rows.forEach(row => {
+    const portfolioName = (row.portfolio || '').trim();
+    const symbol = (row.symbol || '').trim().toUpperCase();
+    const shares = parseFloat(row.shares);
+    const avgCost = parseFloat(row.avgCost);
+    const name = (row.name || '').trim();
+    const currentPrice = row.currentPrice ? parseFloat(row.currentPrice) : avgCost;
+
+    if (!portfolioName || !symbol || isNaN(shares) || isNaN(avgCost)) {
+      errors++;
+      return;
+    }
+
+    // Find or create portfolio
+    let portfolio = appData.portfolios.find(p => p.name.toLowerCase() === portfolioName.toLowerCase());
+    if (!portfolio) {
+      portfolio = { id: createId(), name: portfolioName, brokerage: 'Other' };
+      appData.portfolios.push(portfolio);
+    }
+
+    // Check for duplicate symbol in same portfolio
+    if (skipDuplicates) {
+      const existing = appData.holdings.find(h => h.portfolioId === portfolio.id && h.symbol.toUpperCase() === symbol);
+      if (existing) {
+        skipped++;
+        return;
+      }
+    }
+
+    const holding = {
+      id: createId(),
+      portfolioId: portfolio.id,
+      symbol,
+      name: name || symbol,
+      shares,
+      avgCost,
+      currentPrice: isNaN(currentPrice) ? avgCost : currentPrice
+    };
+    appData.holdings.push(holding);
+    imported++;
+  });
+
+  saveData(appData);
+  result.classList.remove('hidden');
+  result.innerHTML = `
+    <span style="color:var(--success);">${imported} imported</span>
+    ${skipped > 0 ? `<span style="color:var(--warning);"> &middot; ${skipped} skipped</span>` : ''}
+    ${errors > 0 ? `<span style="color:var(--danger);"> &middot; ${errors} errors</span>` : ''}
+  `;
+  document.getElementById('holdingsCSVImportBtn').disabled = true;
+  refreshPageData();
+  showToast(`Imported ${imported} holdings`, 'success');
+}
+
 window.refreshPageData = refreshPageData;
 
 if (document.readyState === 'loading') {

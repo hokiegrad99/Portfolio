@@ -68,15 +68,12 @@ function getUserPriceCacheKey(username) {
 function getCurrentUser() {
   // Try localStorage first, then sessionStorage fallback
   let session = localStorage.getItem(SESSION_KEY);
-  const fromLocal = !!session;
   if (!session) {
     session = sessionStorage.getItem(SESSION_KEY);
   }
-  console.log('[Auth] getCurrentUser - localStorage:', fromLocal, 'sessionStorage:', !!session, 'session present:', !!session);
   if (!session) return null;
   try {
     const parsed = JSON.parse(session);
-    console.log('[Auth] getCurrentUser - username:', parsed.username);
     return parsed.username || null;
   } catch (e) {
     console.error('[Auth] getCurrentUser - failed to parse session:', e);
@@ -107,9 +104,7 @@ function logoutUser() {
 
 function requireAuth() {
   const user = getCurrentUser();
-  console.log('[Auth] requireAuth called, user:', user);
   if (!user) {
-    console.log('[Auth] No user found, redirecting to login.html');
     window.location.href = 'login.html';
     return false;
   }
@@ -366,13 +361,24 @@ function loadData() {
     const key = getUserDataKey(user);
     try {
       const raw = localStorage.getItem(key);
-      if (!raw) return getDefaultData();
-      const parsed = JSON.parse(raw);
-      return { ...getDefaultData(), ...parsed };
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return { ...getDefaultData(), ...parsed };
+      }
     } catch (e) {
-      console.error('Failed to load data:', e);
-      return getDefaultData();
+      console.error('Failed to load user data:', e);
     }
+    // Fallback to legacy key if user-specific key is missing
+    try {
+      const raw = localStorage.getItem('portfolioTrackerData');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return { ...getDefaultData(), ...parsed };
+      }
+    } catch (e) {
+      console.error('Failed to load legacy data:', e);
+    }
+    return getDefaultData();
   }
 
   // Legacy fallback for non-auth users
@@ -409,6 +415,37 @@ function saveData(data) {
 
 // Global data reference
 let appData = loadData();
+
+function clearData() {
+  const user = getCurrentUser();
+  const emptyData = getDefaultData();
+  emptyData.initialized = true;
+
+  try {
+    // Always clear both user-specific and legacy keys to ensure consistency
+    // regardless of getCurrentUser() behavior or browser quirks.
+    if (user) {
+      const key = getUserDataKey(user);
+      localStorage.removeItem(getUserPriceCacheKey(user));
+      localStorage.setItem(key, JSON.stringify(emptyData));
+    }
+    localStorage.removeItem('portfolioTrackerPriceCache');
+    localStorage.setItem('portfolioTrackerData', JSON.stringify(emptyData));
+  } catch (e) {
+    console.error('Failed to clear data in localStorage:', e);
+    showToast('Failed to clear data. Storage may be full or restricted.', 'error');
+  }
+
+  // Clear in-memory appData in place so the current page is also empty
+  appData.portfolios.length = 0;
+  appData.holdings.length = 0;
+  appData.transactions.length = 0;
+  appData.settings.defaultPortfolioId = null;
+  appData.settings.gistToken = '';
+  appData.settings.gistId = '';
+  appData.settings.currency = 'USD';
+  appData.initialized = true;
+}
 
 // ============================================
 // Sample Data
@@ -565,6 +602,102 @@ function getMonthFromDate(dateStr) {
 
 function getYearFromDate(dateStr) {
   return dateStr.substring(0, 4);
+}
+
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function downloadCSVTemplate(filename, headers, rows, label) {
+  function escapeCSV(val) {
+    const str = String(val ?? '');
+    if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+      return '"' + str.replace(/"/g, '""') + '"';
+    }
+    return str;
+  }
+  const csv = [headers.map(escapeCSV).join(','), ...rows.map(r => r.map(escapeCSV).join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  showToast((label || 'Template') + ' downloaded', 'success');
+}
+
+function isValidDate(dateStr) {
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false;
+  const d = new Date(dateStr + 'T00:00:00');
+  return d instanceof Date && !isNaN(d) && d.toISOString().slice(0, 10) === dateStr;
+}
+
+// ============================================
+// CSV Parsing
+// ============================================
+
+function parseCSV(text) {
+  // Strip UTF-8 BOM that Excel and other apps prepend
+  const cleanText = text.replace(/^\uFEFF/, '');
+  const lines = cleanText.trim().split(/\r?\n/);
+  if (lines.length === 0) return { headers: [], rows: [] };
+
+  // Parse header row
+  const headers = parseCSVLine(lines[0]);
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const values = parseCSVLine(line);
+    const row = {};
+    headers.forEach((h, idx) => {
+      row[h.trim()] = values[idx] !== undefined ? values[idx].trim() : '';
+    });
+    rows.push(row);
+  }
+  return { headers, rows };
+}
+
+function parseCSVLine(line) {
+  const values = [];
+  let current = '';
+  let insideQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const nextChar = line[i + 1];
+    if (insideQuotes) {
+      if (char === '"') {
+        if (nextChar === '"') {
+          current += '"';
+          i++;
+        } else {
+          insideQuotes = false;
+        }
+      } else {
+        current += char;
+      }
+    } else {
+      if (char === '"') {
+        insideQuotes = true;
+      } else if (char === ',') {
+        values.push(current);
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+  }
+  values.push(current);
+  return values;
 }
 
 // ============================================
@@ -1087,14 +1220,19 @@ async function fetchStockInfo(symbol) {
     };
   }
 
-  const proxyUrl = `https://corsproxy.io/?https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(cleanSymbol)}?interval=1d&range=1d`;
+  const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(cleanSymbol)}?interval=1d&range=1d`)}`;
 
   try {
     const response = await fetch(proxyUrl);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
-    const data = await response.json();
+    const wrapper = await response.json();
+    const contents = wrapper?.contents;
+    if (!contents) {
+      throw new Error('No contents in proxy response');
+    }
+    const data = JSON.parse(contents);
     const result = data?.chart?.result?.[0];
     if (!result) {
       throw new Error('No data in response');
@@ -1469,3 +1607,38 @@ if (document.readyState === 'loading') {
 } else {
   initApp();
 }
+
+// Handle back-forward cache (bfcache): reinitialize data when restored from cache
+// so stale in-memory data is refreshed from localStorage without a full reload.
+// Firefox is unreliable with window.location.reload() inside pageshow, so we
+// rehydrate the app state directly.
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) {
+    appData = loadData();
+    if (!appData.initialized) {
+      generateSampleData();
+    }
+    initNavigation();
+    populatePortfolioSelector();
+    if (typeof window.refreshPageData === 'function') {
+      window.refreshPageData();
+    }
+  }
+});
+
+// Sync data across tabs when localStorage changes in another tab
+let _storageSyncTimer = null;
+window.addEventListener('storage', (event) => {
+  const user = getCurrentUser();
+  const userKey = user ? getUserDataKey(user) : null;
+  const priceKey = user ? getUserPriceCacheKey(user) : 'portfolioTrackerPriceCache';
+  if (event.key === userKey || event.key === 'portfolioTrackerData' || event.key === priceKey) {
+    if (_storageSyncTimer) clearTimeout(_storageSyncTimer);
+    _storageSyncTimer = setTimeout(() => {
+      appData = loadData();
+      if (typeof window.refreshPageData === 'function') {
+        window.refreshPageData();
+      }
+    }, 50);
+  }
+});
