@@ -84,6 +84,9 @@ function onTxHoldingChange() {
   if (holding && symbolInput) {
     symbolInput.value = holding.symbol;
     symbolInput.dataset.lastSymbol = holding.symbol;
+    // Clear any invalid validation since this is a known holding
+    symbolInput.classList.remove('input-invalid');
+    symbolInput.classList.add('input-valid');
   }
   if (holding && nameInput) {
     nameInput.value = holding.name || '';
@@ -132,11 +135,15 @@ async function autoLookupTxSymbol() {
   const symbol = symbolInput.value.trim().toUpperCase();
   const lastSymbol = symbolInput.dataset.lastSymbol || '';
 
-  if (!symbol || symbol.length > 10) return;
+  if (!symbol || symbol.length > 10) {
+    symbolInput.classList.remove('input-valid', 'input-invalid');
+    return;
+  }
 
-  // If symbol changed from last lookup, clear old name/price so lookup can fill them
+  // If symbol changed from last lookup, clear old name/price and validation so lookup can fill them
   if (symbol !== lastSymbol) {
     nameInput.value = '';
+    symbolInput.classList.remove('input-valid', 'input-invalid');
   }
 
   // Clear any pending debounce
@@ -151,6 +158,8 @@ async function autoLookupTxSymbol() {
     if (spinner) spinner.classList.add('hidden');
 
     if (info) {
+      symbolInput.classList.remove('input-invalid');
+      symbolInput.classList.add('input-valid');
       symbolInput.dataset.lastSymbol = symbol;
       if (!nameInput.value.trim()) {
         nameInput.value = info.name;
@@ -171,6 +180,8 @@ async function autoLookupTxSymbol() {
         }
       }
     } else {
+      symbolInput.classList.remove('input-valid');
+      symbolInput.classList.add('input-invalid');
       if (status) { status.textContent = 'Symbol not found'; }
       setTimeout(() => { if (status) status.classList.add('hidden'); }, 3000);
     }
@@ -187,13 +198,16 @@ function openAddTransactionModal() {
   populateTxPortfolioOptions();
   populateTxHoldingOptions('');
 
-  // Reset lookup status
+  // Reset lookup status and validation
+  const symbolInput = document.getElementById('txSymbol');
   const spinner = document.getElementById('txSymbolLookupSpinner');
   const status = document.getElementById('txSymbolLookupStatus');
+  if (symbolInput) {
+    symbolInput.classList.remove('input-valid', 'input-invalid');
+    symbolInput.dataset.lastSymbol = '';
+  }
   if (spinner) spinner.classList.add('hidden');
   if (status) { status.classList.add('hidden'); status.textContent = ''; }
-  const symbolInput = document.getElementById('txSymbol');
-  if (symbolInput) symbolInput.dataset.lastSymbol = '';
 
   const selectedPortfolio = getSelectedPortfolioId();
   if (selectedPortfolio) {
@@ -232,9 +246,12 @@ function editTransaction(id) {
     if (symbolInput) symbolInput.dataset.lastSymbol = holding.symbol;
   }
 
-  // Reset lookup status
+  // Reset lookup status and validation
   const spinner = document.getElementById('txSymbolLookupSpinner');
   const status = document.getElementById('txSymbolLookupStatus');
+  if (symbolInput) {
+    symbolInput.classList.remove('input-valid', 'input-invalid');
+  }
   if (spinner) spinner.classList.add('hidden');
   if (status) { status.classList.add('hidden'); status.textContent = ''; }
 

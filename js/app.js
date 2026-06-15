@@ -66,12 +66,20 @@ function getUserPriceCacheKey(username) {
 }
 
 function getCurrentUser() {
-  const session = localStorage.getItem(SESSION_KEY);
+  // Try localStorage first, then sessionStorage fallback
+  let session = localStorage.getItem(SESSION_KEY);
+  const fromLocal = !!session;
+  if (!session) {
+    session = sessionStorage.getItem(SESSION_KEY);
+  }
+  console.log('[Auth] getCurrentUser - localStorage:', fromLocal, 'sessionStorage:', !!session, 'session present:', !!session);
   if (!session) return null;
   try {
     const parsed = JSON.parse(session);
+    console.log('[Auth] getCurrentUser - username:', parsed.username);
     return parsed.username || null;
   } catch (e) {
+    console.error('[Auth] getCurrentUser - failed to parse session:', e);
     return null;
   }
 }
@@ -80,14 +88,28 @@ function isLoggedIn() {
   return !!getCurrentUser();
 }
 
-function logoutUser() {
+function saveSession(username) {
+  const session = JSON.stringify({ username: username.toLowerCase().trim() });
+  localStorage.setItem(SESSION_KEY, session);
+  sessionStorage.setItem(SESSION_KEY, session);
+}
+
+function clearSession() {
   localStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem(SESSION_KEY);
+}
+
+function logoutUser() {
+  clearSession();
   appData = getDefaultData();
   window.location.href = 'login.html';
 }
 
 function requireAuth() {
-  if (!isLoggedIn()) {
+  const user = getCurrentUser();
+  console.log('[Auth] requireAuth called, user:', user);
+  if (!user) {
+    console.log('[Auth] No user found, redirecting to login.html');
     window.location.href = 'login.html';
     return false;
   }
@@ -117,7 +139,7 @@ async function registerUser(username, password) {
   saveUsers(users);
 
   // Set session
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ username: lower }));
+  saveSession(lower);
 
   // Check for existing legacy data and migrate it
   const legacyData = localStorage.getItem('portfolioTrackerData');
@@ -162,7 +184,7 @@ async function loginUser(username, password) {
     return { success: false, message: 'Invalid username or password' };
   }
 
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ username: lower }));
+  saveSession(lower);
   appData = loadData();
 
   return { success: true };
@@ -1049,6 +1071,9 @@ const STOCK_INFO_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour for instant modal look
 
 async function fetchStockInfo(symbol) {
   const cleanSymbol = symbol.trim().toUpperCase();
+  if (!cleanSymbol || cleanSymbol.length > 10) {
+    return null;
+  }
   const cache = loadPriceCache();
   const cached = cache[cleanSymbol];
 
@@ -1137,8 +1162,10 @@ async function refreshAllPrices() {
     }
   }
 
-  cache._lastFetch = now;
-  savePriceCache(cache);
+  // Reload cache before saving to avoid overwriting entries added by fetchStockInfo
+  const freshCache = loadPriceCache();
+  freshCache._lastFetch = now;
+  savePriceCache(freshCache);
   saveData(appData);
 
   if (updated > 0) {
@@ -1225,6 +1252,10 @@ async function importDataFromJSON(file, password = null) {
         }
       }
     };
+    reader.onerror = () => {
+      showToast('Failed to read file', 'error');
+      reject(new Error('Failed to read file'));
+    };
     reader.readAsText(file);
   });
 }
@@ -1234,7 +1265,8 @@ async function importDataFromJSON(file, password = null) {
 // ============================================
 
 async function exportToGist(token, encrypt = false, password = null) {
-  if (!token) {
+  const cleanToken = (token || '').trim();
+  if (!cleanToken) {
     showToast('GitHub token is required', 'error');
     return false;
   }
@@ -1269,7 +1301,7 @@ async function exportToGist(token, encrypt = false, password = null) {
     const response = await fetch(url, {
       method,
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${cleanToken}`,
         'Accept': 'application/vnd.github+json',
         'Content-Type': 'application/json'
       },
@@ -1277,13 +1309,19 @@ async function exportToGist(token, encrypt = false, password = null) {
     });
 
     if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.message || `HTTP ${response.status}`);
+      let errMessage = `HTTP ${response.status}`;
+      try {
+        const errJson = await response.json();
+        errMessage = errJson.message || errMessage;
+      } catch (e) {
+        // response body is not JSON
+      }
+      throw new Error(errMessage);
     }
 
     const result = await response.json();
     appData.settings.gistId = result.id;
-    appData.settings.gistToken = token;
+    appData.settings.gistToken = cleanToken;
     saveData(appData);
     showToast(encrypt ? 'Encrypted backup exported to Gist successfully' : 'Data exported to Gist successfully', 'success');
     return result;
@@ -1294,22 +1332,30 @@ async function exportToGist(token, encrypt = false, password = null) {
 }
 
 async function importFromGist(token, gistId, password = null) {
-  if (!token || !gistId) {
+  const cleanToken = (token || '').trim();
+  const cleanGistId = (gistId || '').trim();
+  if (!cleanToken || !cleanGistId) {
     showToast('GitHub token and Gist ID are required', 'error');
     return false;
   }
 
   try {
-    const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+    const response = await fetch(`https://api.github.com/gists/${cleanGistId}`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${cleanToken}`,
         'Accept': 'application/vnd.github+json'
       }
     });
 
     if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.message || `HTTP ${response.status}`);
+      let errMessage = `HTTP ${response.status}`;
+      try {
+        const errJson = await response.json();
+        errMessage = errJson.message || errMessage;
+      } catch (e) {
+        // response body is not JSON
+      }
+      throw new Error(errMessage);
     }
 
     const result = await response.json();
@@ -1338,8 +1384,8 @@ async function importFromGist(token, gistId, password = null) {
 
     if (data.portfolios && data.holdings && data.transactions && data.settings) {
       appData = data;
-      appData.settings.gistToken = token;
-      appData.settings.gistId = gistId;
+      appData.settings.gistToken = cleanToken;
+      appData.settings.gistId = cleanGistId;
       saveData(appData);
       showToast('Data imported from Gist successfully', 'success');
       return true;

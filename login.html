@@ -191,29 +191,21 @@
       }
       if (btn) { btn.disabled = true; btn.textContent = 'Restoring...'; }
       try {
-        const content = await readFileAsText(file);
-        const isEncrypted = isEncryptedData(content);
-        let data;
-        if (isEncrypted) {
-          const password = document.getElementById('restoreLocalPassword').value;
-          if (!password) {
-            showToast('This backup is encrypted. Please enter the backup password.', 'warning');
-            document.getElementById('restoreLocalPasswordGroup').classList.remove('hidden');
-            document.getElementById('restoreLocalPassword').focus();
-            return;
-          }
-          data = await decryptData(content, password);
-        } else {
-          data = JSON.parse(content);
-        }
-        if (!validateBackupData(data)) return;
+        const password = document.getElementById('restoreLocalPassword').value;
+        await importDataFromJSON(file, password);
         if (isLoggedIn()) {
-          promptRestoreToCurrentAccount(data);
+          setTimeout(() => { window.location.href = 'index.html'; }, 800);
         } else {
-          await promptRegisterAndRestore(data);
+          promptRegisterAndRestore(appData);
         }
       } catch (err) {
-        showToast('Failed to restore: ' + err.message, 'error');
+        if (err && err.encrypted) {
+          showToast('This backup is encrypted. Please enter the backup password.', 'warning');
+          document.getElementById('restoreLocalPasswordGroup').classList.remove('hidden');
+          document.getElementById('restoreLocalPassword').focus();
+        } else {
+          showToast('Failed to restore: ' + (err.message || 'Unknown error'), 'error');
+        }
       } finally {
         if (btn) { btn.disabled = false; btn.textContent = 'Restore from File'; }
       }
@@ -223,64 +215,24 @@
       const btn = document.querySelector('#restoreGistForm button');
       const token = document.getElementById('restoreGistToken').value.trim();
       const gistId = document.getElementById('restoreGistId').value.trim();
+      const password = document.getElementById('restoreGistPassword').value;
       if (!token || !gistId) {
         showToast('Please enter both GitHub token and Gist ID', 'warning');
         return;
       }
       if (btn) { btn.disabled = true; btn.textContent = 'Restoring...'; }
-      try {
-        const response = await fetch(`https://api.github.com/gists/${gistId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/vnd.github+json'
-          }
-        });
-        if (!response.ok) {
-          const err = await response.json();
-          throw new Error(err.message || `HTTP ${response.status}`);
-        }
-        const result = await response.json();
-        const file = Object.values(result.files)[0];
-        if (!file) throw new Error('No files found in Gist');
-        let content = file.content;
-        if (file.truncated) {
-          const rawResponse = await fetch(file.raw_url);
-          content = await rawResponse.text();
-        }
-        const isEncrypted = isEncryptedData(content);
-        let data;
-        if (isEncrypted) {
-          const password = document.getElementById('restoreGistPassword').value;
-          if (!password) {
-            showToast('This backup is encrypted. Please enter the backup password.', 'warning');
-            document.getElementById('restoreGistPasswordGroup').classList.remove('hidden');
-            document.getElementById('restoreGistPassword').focus();
-            return;
-          }
-          data = await decryptData(content, password);
-        } else {
-          data = JSON.parse(content);
-        }
-        if (!validateBackupData(data)) return;
+      const result = await importFromGist(token, gistId, password);
+      if (btn) { btn.disabled = false; btn.textContent = 'Restore from Gist'; }
+      if (result === true) {
         if (isLoggedIn()) {
-          await promptRestoreToCurrentAccount(data, token, gistId);
+          setTimeout(() => { window.location.href = 'index.html'; }, 800);
         } else {
-          await promptRegisterAndRestore(data, token, gistId);
+          promptRegisterAndRestore(appData);
         }
-      } catch (err) {
-        showToast('Failed to restore from Gist: ' + err.message, 'error');
-      } finally {
-        if (btn) { btn.disabled = false; btn.textContent = 'Restore from Gist'; }
+      } else if (result && result.encrypted) {
+        document.getElementById('restoreGistPasswordGroup').classList.remove('hidden');
+        document.getElementById('restoreGistPassword').focus();
       }
-    }
-
-    function readFileAsText(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.onerror = () => reject(new Error('Failed to read file'));
-        reader.readAsText(file);
-      });
     }
 
     function validateBackupData(data) {

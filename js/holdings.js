@@ -73,9 +73,14 @@ function openAddHoldingModal() {
   if (selectedPortfolio) {
     document.getElementById('holdingPortfolio').value = selectedPortfolio;
   }
-  // Reset lookup status
+  // Reset lookup status and validation
+  const symbolInput = document.getElementById('holdingSymbol');
   const spinner = document.getElementById('symbolLookupSpinner');
   const status = document.getElementById('symbolLookupStatus');
+  if (symbolInput) {
+    symbolInput.classList.remove('input-valid', 'input-invalid');
+    symbolInput.dataset.lastSymbol = '';
+  }
   if (spinner) spinner.classList.add('hidden');
   if (status) { status.classList.add('hidden'); status.textContent = ''; }
   showModal('holdingModal');
@@ -92,12 +97,16 @@ async function autoLookupHoldingInfo() {
   const symbol = symbolInput.value.trim().toUpperCase();
   const lastSymbol = symbolInput.dataset.lastSymbol || '';
 
-  if (!symbol || symbol.length > 10) return;
+  if (!symbol || symbol.length > 10) {
+    symbolInput.classList.remove('input-valid', 'input-invalid');
+    return;
+  }
 
-  // If symbol changed from last lookup, clear old name/price so lookup can fill them
+  // If symbol changed from last lookup, clear old name/price and validation so lookup can fill them
   if (symbol !== lastSymbol) {
     nameInput.value = '';
     priceInput.value = '';
+    symbolInput.classList.remove('input-valid', 'input-invalid');
   }
 
   // Clear any pending debounce
@@ -112,6 +121,8 @@ async function autoLookupHoldingInfo() {
     if (spinner) spinner.classList.add('hidden');
 
     if (info) {
+      symbolInput.classList.remove('input-invalid');
+      symbolInput.classList.add('input-valid');
       symbolInput.dataset.lastSymbol = symbol;
       if (!nameInput.value.trim()) {
         nameInput.value = info.name;
@@ -122,6 +133,8 @@ async function autoLookupHoldingInfo() {
       if (status) { status.textContent = 'Found: ' + info.name; }
       setTimeout(() => { if (status) status.classList.add('hidden'); }, 2000);
     } else {
+      symbolInput.classList.remove('input-valid');
+      symbolInput.classList.add('input-invalid');
       if (status) { status.textContent = 'Symbol not found'; }
       setTimeout(() => { if (status) status.classList.add('hidden'); }, 3000);
     }
@@ -139,9 +152,14 @@ function editHolding(id) {
   document.getElementById('holdingAvgCost').value = h.avgCost;
   document.getElementById('holdingCurrentPrice').value = h.currentPrice || '';
   document.getElementById('holdingModalTitle').textContent = 'Edit Holding';
-  // Reset lookup status
+  // Reset lookup status and validation
+  const symbolInput = document.getElementById('holdingSymbol');
   const spinner = document.getElementById('symbolLookupSpinner');
   const status = document.getElementById('symbolLookupStatus');
+  if (symbolInput) {
+    symbolInput.classList.remove('input-valid', 'input-invalid');
+    symbolInput.dataset.lastSymbol = '';
+  }
   if (spinner) spinner.classList.add('hidden');
   if (status) { status.classList.add('hidden'); status.textContent = ''; }
   populatePortfolioOptions();
