@@ -1092,6 +1092,26 @@ function addHolding(holding) {
   holding.id = createId();
   appData.holdings.push(holding);
   saveData(appData);
+
+  // If the new holding carries shares > 0, also seed the transaction ledger
+  // with an "initial" transaction so subsequent buys/sells correctly accumulate
+  // (rather than overwriting) the held shares in `recalcHoldingFromTransactions`.
+  if (holding.shares > 0) {
+    appData.transactions.push({
+      id: createId(),
+      portfolioId: holding.portfolioId,
+      holdingId: holding.id,
+      date: getTodayStr(),
+      type: 'initial',
+      shares: holding.shares,
+      price: holding.avgCost || 0,
+      amount: 0,
+      dividendType: null,
+      notes: 'Initial position'
+    });
+    saveData(appData);
+  }
+
   return holding;
 }
 
@@ -1147,7 +1167,33 @@ function recalcHoldingFromTransactions(holdingId) {
   const holding = getHolding(holdingId);
   if (!holding) return;
 
-  const txs = getHoldingTransactions(holdingId).sort((a, b) => a.date.localeCompare(b.date));
+  let txs = getHoldingTransactions(holdingId).sort((a, b) => a.date.localeCompare(b.date));
+
+  // Safety net for "orphan" holdings: a holding whose shares were set directly
+  // (e.g. on the Holdings page) without an accompanying "initial" transaction.
+  // Without this fix, the recalc below only sees later transactions and would
+  // overwrite the holding's existing shares. Auto-generate the missing initial
+  // transaction so the ledger properly backs the held shares.
+  // Note: this only runs once per orphan holding (we immediately exit if an
+  // initial tx is already present). Deleting the auto-generated initial tx
+  // would unprotect the holding — user-initiated data loss in that case.
+  const hasInitial = txs.some(tx => tx.type === 'initial');
+  if (!hasInitial && holding.shares > 0) {
+    appData.transactions.push({
+      id: createId(),
+      portfolioId: holding.portfolioId,
+      holdingId: holding.id,
+      date: getTodayStr(),
+      type: 'initial',
+      shares: holding.shares,
+      price: holding.avgCost || 0,
+      amount: 0,
+      dividendType: null,
+      notes: 'Auto-generated to preserve existing holding shares'
+    });
+    txs = getHoldingTransactions(holdingId).sort((a, b) => a.date.localeCompare(b.date));
+  }
+
   let shares = 0;
   let totalCost = 0;
 

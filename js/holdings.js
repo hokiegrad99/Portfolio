@@ -335,16 +335,19 @@ function importHoldingsFromCSV() {
       }
     }
 
-    const holding = {
-      id: createId(),
+    // Route through `addHolding` so that, when (and only when) the imported
+    // holding carries shares > 0, a matching "initial" transaction is also
+    // created in the ledger. This mirrors how new holdings from the Holdings
+    // page back their shares, so subsequent buys/sells accumulate rather than
+    // overwrite. `addHolding` assigns the id internally.
+    addHolding({
       portfolioId: portfolio.id,
       symbol,
       name: name || symbol,
       shares,
       avgCost,
       currentPrice: isNaN(currentPrice) ? avgCost : currentPrice
-    };
-    appData.holdings.push(holding);
+    });
     imported++;
   });
 
